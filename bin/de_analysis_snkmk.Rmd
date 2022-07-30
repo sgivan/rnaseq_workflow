@@ -1,6 +1,6 @@
 ---
 title: "DE_analysis"
-author: "Kin Lau"
+author: "Kin Lau, Scott Givan"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
   html_document:
@@ -13,6 +13,12 @@ output:
       smooth_scroll: false
     number_sections: true
 ---
+
+```{r logging}
+log <- file(snakemake@log[[1]], open="wt")
+sink(log)
+sink(log, type="message")
+```
 
 ```{r starttime}
 # save start time for script
@@ -42,9 +48,9 @@ dir.create(outdir)
 ```{r loadlibs, echo=TRUE, warning=TRUE, message=FALSE, cache=FALSE}
 
 #orgdb <- "org.Mm.eg.db"
-orgdb <- "org.Ce.eg.db"
-library(orgdb, character.only=TRUE) # load the org.db for your organism
-library(AnnotationDbi)
+#orgdb <- "org.Ce.eg.db"
+#library(orgdb, character.only=TRUE) # load the org.db for your organism
+#library(AnnotationDbi)
 library(ggplot2)
 library(dplyr)
 library(edgeR)
@@ -55,6 +61,18 @@ library(stringr)
 library(cowplot)
 library(EnhancedVolcano)
 library(patchwork)
+
+annot_config <- readr::read_tsv(file="bin/annotation.tsv")
+orgdb <- annot_config %>% filter(common_name == 'worm') %>% select(org.db)
+orgdbname <- unlist(orgdb)
+#message(paste0("orgdbname: '",orgdbname, "'"))
+#message(paste("orgdbname type:", typeof(orgdbname)))
+#orgdbname <- "org.Ce.eg.db"
+#message('stopping before orgdb')
+#stop()
+library(orgdbname, character.only=TRUE) # load the org.db for your organism
+library(AnnotationDbi)
+
 ```
 
 # Get counts
@@ -67,20 +85,24 @@ library(patchwork)
 ext_data_dir <- "/analysis/star"
 wd <- getwd()
 #ext_data_dir <- paste0(wd, "/../", ext_data_dir)
-ext_data_dir <- paste0(wd, "/../", ext_data_dir)
+ext_data_dir <- paste0(wd, "/", ext_data_dir)
 message(paste("ext_data_dir: ", ext_data_dir))
 #stop()
 count_data <- bbcRNA::star_to_mat(dir = ext_data_dir,
                                   rgx = "^[^\\.]+", column = 3)
 dim(count_data)
 
+message(paste("dim of count_data: ", c(dim(count_data),"\n")))
+message(paste("row names:"))
+message(head(rownames(count_data)))
+
 # add gene symbols
 gene_names_df <- data.frame(row.names = rownames(count_data))
-gene_names_df$Symbol <- AnnotationDbi::mapIds(eval(as.name(orgdb)), rownames(gene_names_df), 
+gene_names_df$Symbol <- AnnotationDbi::mapIds(eval(as.name(orgdbname)), rownames(gene_names_df), 
                                               keytype="ENSEMBL", column="SYMBOL", 
                                               multiVals="first")
 gene_names_df$Uniq_syms <- scater::uniquifyFeatureNames(rownames(gene_names_df), gene_names_df$Symbol)
-gene_names_df$entrez <- AnnotationDbi::mapIds(eval(as.name(orgdb)), rownames(gene_names_df), 
+gene_names_df$entrez <- AnnotationDbi::mapIds(eval(as.name(orgdbname)), rownames(gene_names_df), 
                                               keytype="ENSEMBL", column="ENTREZID", 
                                               multiVals="first") # there are duplicates in here.
 

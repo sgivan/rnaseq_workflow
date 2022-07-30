@@ -91,7 +91,7 @@ rule all:
         "analysis/multiqc/multiqc_report.html",
         #expand("analysis/02_splitncigar/{units.sample}.Aligned.sortedByCoord.out.addRG.mrkdup.splitncigar.bam", units=var_calling_units.itertuples())
         # edgeR
-        #"bin/diffExp.html",
+        "bin/de_analysis_snkmk.html",
         #seqtk
         #expand("analysis/subsample/{units.sample}_R{read}.fq.gz", read=avail_read, units=units.itertuples())
 
@@ -500,20 +500,22 @@ rule edgeR:
         expand("analysis/star/{units.sample}.Aligned.sortedByCoord.out.bam", units=units.itertuples()),
         "analysis/multiqc/multiqc_report.html" # require multiQC to be run before this analysis
     output:
-        "bin/diffExp.html"
+#        "bin/de_analysis.html"
+        "bin/de_analysis_snkmk.html",
     log:
         "logs/edgeR.log"
     benchmark:
         "benchmarks/edgeR/edgeR.txt"
     envmodules:
+        "bbc/R/R-4.2.1",
+        "bbc/pandoc/pandoc-2.7.3"
         #use node095 RStudio Server R install
     threads: 1
     resources:
         nodes = 1,
         mem_gb = 16,
     script:
-        "bin/diffExp.Rmd"
-
+        "bin/de_analysis_snkmk.Rmd"
 
 rule addRG:
     input:
