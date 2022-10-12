@@ -63,7 +63,12 @@ library(EnhancedVolcano)
 library(patchwork)
 
 annot_config <- readr::read_tsv(file="bin/annotation.tsv")
-orgdb <- annot_config %>% filter(common_name == 'worm') %>% select(org.db)
+#orgdb <- annot_config %>% filter(common_name == 'worm') %>% select(org.db)
+#
+# running this from snakemake, so
+# try using the snakemake object
+#
+orgdb <- annot_config %>% filter(common_name == snakemake@config[["common_name"]]) %>% select(org.db)
 orgdbname <- unlist(orgdb)
 #message(paste0("orgdbname: '",orgdbname, "'"))
 #message(paste("orgdbname type:", typeof(orgdbname)))
@@ -78,16 +83,11 @@ library(AnnotationDbi)
 # Get counts
 
 ```{r get_counts}
-#ext_data_dir <- "../results_from_unix/WUN_20210203_RNA_VBCS-520/analysis/star/"
-#wd <- getwd()
-#ext_data_dir <- paste0(wd, "../analysis/star")
-#ext_data_dir <- "../analysis/star"
+
 ext_data_dir <- "/analysis/star"
 wd <- getwd()
-#ext_data_dir <- paste0(wd, "/../", ext_data_dir)
 ext_data_dir <- paste0(wd, "/", ext_data_dir)
 message(paste("ext_data_dir: ", ext_data_dir))
-#stop()
 count_data <- bbcRNA::star_to_mat(dir = ext_data_dir,
                                   rgx = "^[^\\.]+", column = 3)
 dim(count_data)
