@@ -17,20 +17,21 @@ output:
     df_print: paged
 ---
 ```{r logging}
-log <- file(snakemake@log[[1]], open="wt")
-sink(log)
-sink(log, type="message")
+#log <- file(snakemake@log[[1]], open="wt")
+#sink(log)
+#sink(log, type="message")
 ```
+library(knitr)
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
 	echo = TRUE,
 	message = FALSE,
 	warning = FALSE,
-	cache = TRUE
+	cache = FALSE
 )
 # for knit testing in RStudio server
-#knitr::opts_knit$set(root.dir = "../")
+knitr::opts_knit$set(root.dir = "../")
 ```
 
 ```{r load_libs}
@@ -49,6 +50,13 @@ library(enrichplot)
 ```
 
 ```{r config}
+#message("stopping 66")
+
+#wd <-getwd()
+#message(wd)
+
+#message('stopping')
+#stop()
 config <- yaml.load_file("bin/config.yaml")
 annotation <- read_tsv("bin/annotation.tsv")
 ```
@@ -63,7 +71,8 @@ if(config$strandedness == "unstranded"){
 }else{stop("config$strandedness=='",config$strandedness,"'.This is an invalid value. Needs to be one of: 'unstranded','forward','reverse'")}
 
 count_matrix <- star_to_mat(dir = "analysis/star/",
-                     rgx = "^[0-9]*", column = star_col)
+                    rgx = "^[^\\.]+", column = star_col)
+#                     rgx = "^[0-9]*", column = star_col)
 ```
 
 # Experimental Design
@@ -91,6 +100,7 @@ colData(bbc_obj) <- cbind(colData(bbc_obj), col_meta[colnames(bbc_obj),])
 
 # view the meta data.
 # colnames(colData(bbc_obj))
+
 knitr::kable(colData(bbc_obj)) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 
@@ -100,7 +110,8 @@ knitr::kable(colData(bbc_obj)) %>%
 
 ```{r get_mapping_rates}
 aln_metrics <- read_star_aln_metrics(dir = "analysis/star/",
-                                 rgx = "^[0-9]*")
+                                 rgx = "^[^\\.]+")
+#                                 rgx = "^[0-9]*")
 # store the mapping metrics in the BbcSE object
 aln_metrics(bbc_obj) <- aln_metrics
 if (!validObject(bbc_obj)){
