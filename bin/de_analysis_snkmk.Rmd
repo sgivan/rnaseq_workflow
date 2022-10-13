@@ -47,10 +47,6 @@ dir.create(outdir)
 
 ```{r loadlibs, echo=TRUE, warning=TRUE, message=FALSE, cache=FALSE}
 
-#orgdb <- "org.Mm.eg.db"
-#orgdb <- "org.Ce.eg.db"
-#library(orgdb, character.only=TRUE) # load the org.db for your organism
-#library(AnnotationDbi)
 library(ggplot2)
 library(dplyr)
 library(edgeR)
@@ -63,20 +59,21 @@ library(EnhancedVolcano)
 library(patchwork)
 
 annot_config <- readr::read_tsv(file="bin/annotation.tsv")
-#orgdb <- annot_config %>% filter(common_name == 'worm') %>% select(org.db)
+units_config <- readr::read_tsv(file="bin/units.tsv")
 #
 # running this from snakemake, so
 # try using the snakemake object
 #
 orgdb <- annot_config %>% filter(common_name == snakemake@config[["common_name"]]) %>% select(org.db)
 orgdbname <- unlist(orgdb)
-#message(paste0("orgdbname: '",orgdbname, "'"))
-#message(paste("orgdbname type:", typeof(orgdbname)))
-#orgdbname <- "org.Ce.eg.db"
-#message('stopping before orgdb')
-#stop()
 library(orgdbname, character.only=TRUE) # load the org.db for your organism
 library(AnnotationDbi)
+
+units_cols <- colnames(units_config)
+factor1 <- units_cols[2]
+factor2 <- units_cols[3]
+
+message(paste0("factors: '", factor1, "', '", factor2, "'"))
 
 ```
 
@@ -95,6 +92,8 @@ dim(count_data)
 message(paste("dim of count_data: ", c(dim(count_data),"\n")))
 message(paste("row names:"))
 message(head(rownames(count_data)))
+message(paste("col names:"))
+message(colnames(count_data))
 
 # add gene symbols
 gene_names_df <- data.frame(row.names = rownames(count_data))
@@ -120,9 +119,14 @@ write_tsv(raw_counts_df, paste0(outdir,"/","raw_counts.tsv"))
 
 ```{r sample_meta}
 samp_names <- colnames(count_data)
-data_for_DE <- tibble(Sample = samp_names,
-                      Genotype = str_extract(samp_names, "^\\D+"),
-                      Litter = str_extract(samp_names, "\\d+$")) %>%
+samp_names
+data_for_DE <- tibble(
+                        Sample = samp_names,
+                        Genotype = str_extract(samp_names, "^[^_]+"),
+                        Litter = str_extract(samp_names, "\\d+$")
+#                      FactorA = str_extract(samp_names, "^\\D+"),
+#                      FactorB = str_extract(samp_names, "\\d+$")
+                     ) %>%
   tibble::column_to_rownames("Sample")
 
 data_for_DE %>% DT::datatable()
@@ -168,6 +172,7 @@ testthat::expect_equal(rownames(count_data), rownames(gene_names_df))
 y <- DGEList(count_data, samples = data_for_DE, genes = gene_names_df) 
 
 design <- model.matrix(~0+Genotype+Litter, data = y$samples)
+#design <- model.matrix(~0+FactorA+FactorB, data = y$samples)
 design
 
 # plot the library sizes
@@ -205,6 +210,7 @@ write_rds(norm_counts_df, paste0(outdir,"/","norm_counts.rds"))
 write_tsv(norm_counts_df, paste0(outdir,"/","norm_counts.tsv"))
 
 plot_pca(norm_counts, "pca.rds", color="Litter", pch="Genotype")
+#plot_pca(norm_counts, "pca.rds", color="FactorB", pch="FactorA")
 ```
 
 # DE analysis
@@ -220,7 +226,14 @@ plotQLDisp(fit, main=paste0("QLDisp plot"))
 # "Typical values for the common BCV (square-rootdispersion) for datasets arising from well-controlled experiments are 0.4 for human data, 0.1 for data on genetically identical model organisms or 0.01 for technical replicates."
 paste0("common BCV: ", sqrt(y$common.dispersion))
 
+#message(paste("y$samples$FactorA", y$samples$FactorA))
+
 contrasts_as_str <- sapply(as.data.frame(combn(unique(paste0("Genotype", y$samples$Genotype)), 2)), function(comp) paste0(comp[1],"-",comp[2]))
+#contrasts_as_str <- sapply(as.data.frame(combn(unique(paste0(factor1, y$samples$FactorA)), 2)), function(comp) paste0(comp[1],"-",comp[2]))
+
+message(paste("contrasts_as_str: ", contrasts_as_str))
+message(paste("design: "))
+design
 
 contrasts <- makeContrasts(contrasts=contrasts_as_str, levels=design)
 
