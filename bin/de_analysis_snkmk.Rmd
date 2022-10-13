@@ -122,10 +122,10 @@ samp_names <- colnames(count_data)
 samp_names
 data_for_DE <- tibble(
                         Sample = samp_names,
-                        Genotype = str_extract(samp_names, "^[^_]+"),
-                        Litter = str_extract(samp_names, "\\d+$")
-#                      FactorA = str_extract(samp_names, "^\\D+"),
-#                      FactorB = str_extract(samp_names, "\\d+$")
+#                        Genotype = str_extract(samp_names, "^[^_]+"),
+#                        Litter = str_extract(samp_names, "\\d+$")
+                        FactorA = str_extract(samp_names, "^[^_]+"),
+                        FactorB = str_extract(samp_names, "\\d+$")
                      ) %>%
   tibble::column_to_rownames("Sample")
 
@@ -171,7 +171,8 @@ testthat::expect_equal(rownames(count_data), rownames(gene_names_df))
 
 y <- DGEList(count_data, samples = data_for_DE, genes = gene_names_df) 
 
-design <- model.matrix(~0+Genotype+Litter, data = y$samples)
+#design <- model.matrix(~0+Genotype+Litter, data = y$samples)
+design <- model.matrix(~0+FactorA+FactorB, data = y$samples)
 #design <- model.matrix(~0+FactorA+FactorB, data = y$samples)
 design
 
@@ -209,7 +210,8 @@ norm_counts_df <- gene_names_df %>%
 write_rds(norm_counts_df, paste0(outdir,"/","norm_counts.rds"))
 write_tsv(norm_counts_df, paste0(outdir,"/","norm_counts.tsv"))
 
-plot_pca(norm_counts, "pca.rds", color="Litter", pch="Genotype")
+#plot_pca(norm_counts, "pca.rds", color="Litter", pch="Genotype")
+plot_pca(norm_counts, "pca.rds", color="FactorB", pch="FactorA")
 #plot_pca(norm_counts, "pca.rds", color="FactorB", pch="FactorA")
 ```
 
@@ -228,7 +230,8 @@ paste0("common BCV: ", sqrt(y$common.dispersion))
 
 #message(paste("y$samples$FactorA", y$samples$FactorA))
 
-contrasts_as_str <- sapply(as.data.frame(combn(unique(paste0("Genotype", y$samples$Genotype)), 2)), function(comp) paste0(comp[1],"-",comp[2]))
+#contrasts_as_str <- sapply(as.data.frame(combn(unique(paste0("Genotype", y$samples$Genotype)), 2)), function(comp) paste0(comp[1],"-",comp[2]))
+contrasts_as_str <- sapply(as.data.frame(combn(unique(paste0("FactorA", y$samples$FactorA)), 2)), function(comp) paste0(comp[1],"-",comp[2]))
 #contrasts_as_str <- sapply(as.data.frame(combn(unique(paste0(factor1, y$samples$FactorA)), 2)), function(comp) paste0(comp[1],"-",comp[2]))
 
 message(paste("contrasts_as_str: ", contrasts_as_str))
