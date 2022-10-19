@@ -30,7 +30,7 @@ strandedness: reverse
 # used for annotation. see src/annotation.tsv for common_name options. e.g.:  "mouse", "human", "fly"
 common_name: worm
 factorA_name: Genotype 
-factorB_name: Replicate
+factorB_name: Treatment
 # differential expression cutoff values
 logfc.filter: 1
 fdr.filter: 0.05

@@ -69,11 +69,16 @@ orgdbname <- unlist(orgdb)
 library(orgdbname, character.only=TRUE) # load the org.db for your organism
 library(AnnotationDbi)
 
-units_cols <- colnames(units_config)
-factor1 <- units_cols[2]
-factor2 <- units_cols[3]
+#units_cols <- colnames(units_config)
+#factor1 <- units_cols[2]
+#factor2 <- units_cols[3]
+factor1 <- snakemake@config[["factorA_name"]]
+factor2 <- snakemake@config[["factorB_name"]]
 
-message(paste0("factors: '", factor1, "', '", factor2, "'"))
+factors <- c(factor1, factor2)
+
+#message(paste0("factors: '", factor1, "', '", factor2, "'"))
+message(paste0("factors: '", factors, "'\n"))
 
 ```
 
@@ -126,7 +131,7 @@ data_for_DE <- data.frame(
 #                        Genotype = str_extract(samp_names, "^[^_]+"),
 #                        Litter = str_extract(samp_names, "\\d+$")
                         FactorA = str_extract(samp_names, "^[^_]+"),
-                        FactorB = str_extract(samp_names, "\\d+$")
+                        FactorB = sapply(str_split(samp_names, "_"), "[[", 2)
                         )
 #                     ) %>%
 #  tibble::column_to_rownames("Sample")
@@ -140,10 +145,12 @@ row.names(data_for_DE) <- samp_names
 #message(paste("data_for_DE 01", data_for_DE))
 #message(paste("rownames for data_for_DE 01", rownames(data_for_DE)))
 
+colnames(data_for_DE) <- factors
+
 data_for_DE %>% DT::datatable()
 
-#message(paste("data_for_DE 02", data_for_DE))
-#message(paste("rownames for data_for_DE 02", rownames(data_for_DE)))
+message(paste("data_for_DE 02", data_for_DE))
+message(paste("rownames for data_for_DE 02", rownames(data_for_DE)))
 
 ```
 
@@ -183,11 +190,17 @@ plot_pca <- function(mat, outrds, color, pch){
 testthat::expect_equal(colnames(count_data), rownames(data_for_DE))
 testthat::expect_equal(rownames(count_data), rownames(gene_names_df))
 
+message("creating DEGList")
+
 y <- DGEList(count_data, samples = data_for_DE, genes = gene_names_df) 
 
+message("creating design matrix")
 #design <- model.matrix(~0+Genotype+Litter, data = y$samples)
-design <- model.matrix(~0+FactorA+FactorB, data = y$samples)
 #design <- model.matrix(~0+FactorA+FactorB, data = y$samples)
+#design <- model.matrix(~0+factors[1]+factors[2], data = y$samples)
+fmla <- as.formula(paste("~0","+",factor1,"+",factor2))
+#design <- model.matrix(~0+Genotype+Treatment, data = y$samples)
+design <- model.matrix(fmla, data = y$samples)
 design
 
 # plot the library sizes
@@ -224,10 +237,13 @@ norm_counts_df <- gene_names_df %>%
 write_rds(norm_counts_df, paste0(outdir,"/","norm_counts.rds"))
 write_tsv(norm_counts_df, paste0(outdir,"/","norm_counts.tsv"))
 
+message("plotting PCA\n")
 #plot_pca(norm_counts, "pca.rds", color="Litter", pch="Genotype")
-plot_pca(norm_counts, "pca.rds", color="FactorB", pch="FactorA")
 #plot_pca(norm_counts, "pca.rds", color="FactorB", pch="FactorA")
+plot_pca(norm_counts, "pca.rds", color=factors[2], pch=factors[1])
 ```
+
+message("DEG analysis")
 
 # DE analysis
 
@@ -243,6 +259,8 @@ plotQLDisp(fit, main=paste0("QLDisp plot"))
 paste0("common BCV: ", sqrt(y$common.dispersion))
 
 #message(paste("y$samples$FactorA", y$samples$FactorA))
+message("making contrasts")
+message(paste("y$samples[[1]]", y$samples[[1]]))
 
 #contrasts_as_str <- sapply(as.data.frame(combn(unique(paste0("Genotype", y$samples$Genotype)), 2)), function(comp) paste0(comp[1],"-",comp[2]))
 contrasts_as_str <- sapply(as.data.frame(combn(unique(paste0("FactorA", y$samples$FactorA)), 2)), function(comp) paste0(comp[1],"-",comp[2]))
